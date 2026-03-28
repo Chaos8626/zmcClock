@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>小番茄成长计时器 - 儿童番茄钟</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Comic Sans MS', 'Arial Rounded MT Bold', 'Microsoft YaHei', sans-serif;
+        }
+        
+        :root {
+            --primary-color: #ff6b6b;
+            --secondary-color: #4ecdc4;
+            --accent-color: #ffe66d;
+            --focus-color: #ff9e6d;
+            --break-color: #6bc5d2;
+            --light-color: #f7fff7;
+            --dark-color: #2d3047;
+            --success-color: #7ae582;
+            --shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        }
+        
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--dark-color);
+            padding: 10px;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 100%;
+            max-height: 100%;
+            background-color: white;
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        header {
+            text-align: center;
+            padding: 10px 0 5px 0;
+            background: linear-gradient(to right, var(--primary-color), var(--focus-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 5px;
+            flex-shrink: 0;
+        }
+        
+        h1 {
+            font-size: clamp(1.4rem, 4vw, 2.5rem);
+            margin-bottom: 5px;
+            line-height: 1.2;
+            word-break: keep-all;
+            white-space: nowrap;
+        }
+        
+        .subtitle {
+            font-size: clamp(0.8rem, 2vw, 1.2rem);
+            color: #666;
+        }
+        
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        /* PC端布局优化 */
+        @media (min-width: 768px) and (orientation: landscape) {
+            .app-container {
+                flex-direction: row;
+                align-items: stretch;
+                gap: 15px;
+            }
+            
+            .main-content {
+                flex: 2;
+                display: flex;
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+            }
+            
+            .container {
+                max-width: 800px;
+                padding: 20px;
+            }
+        }
+        
+        /* 横屏模式优化 */
+        @media (orientation: landscape) and (max-height: 500px) {
+            .container {
+                max-width: 95%;
+                padding: 10px;
+            }
+            
+            header {
+                padding: 5px 0;
+                margin-bottom: 5px;
+            }
+            
+            h1 {
+                font-size: 1.6rem;
+            }
+            
+            .app-container {
+                gap: 10px;
+            }
+        }
+        
+        /* 模式指示器 */
+        .mode-indicator {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 8px;
+            flex-wrap: nowrap;
+            flex-shrink: 0;
+        }
+        
+        .mode-tag {
+            padding: 6px 12px;
+            border-radius: 50px;
+            font-weight: bold;
+            font-size: clamp(0.8rem, 2vw, 1.1rem);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+        
+        .mode-tag.active {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .focus-tag {
+            background-color: rgba(255, 158, 109, 0.2);
+            color: var(--focus-color);
+        }
+        
+        .break-tag {
+            background-color: rgba(107, 197, 210, 0.2);
+            color: var(--break-color);
+        }
+        
+        /* 番茄钟主体 */
+        .tomato-timer {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            padding: 10px;
+            background-color: #f9f9ff;
+            border-radius: 15px;
+            position: relative;
+            flex: 1;
+            min-height: 0;
+        }
+        
+        /* 番茄/进度环 */
+        .tomato-container {
+            position: relative;
+            width: clamp(120px, 35vw, 180px);
+            height: clamp(120px, 35vw, 180px);
+            flex-shrink: 0;
+        }
+        
+        .tomato-circle {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            transition: all 0.5s;
+        }
+        
+        .progress-ring {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: clamp(10px, 2.5vw, 15px) solid #f0f0f0;
+        }
+        
+        .progress-fill {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: clamp(10px, 2.5vw, 15px) solid var(--focus-color);
+            border-left-color: transparent;
+            border-bottom-color: transparent;
+            transform: rotate(45deg);
+            transition: transform 1s linear;
+        }
+        
+        .break .progress-fill {
+            border-color: var(--break-color);
+            border-left-color: transparent;
+            border-bottom-color: transparent;
+        }
+        
+        .tomato-face {
+            width: clamp(80px, 25vw, 120px);
+            height: clamp(80px, 25vw, 120px);
+            background-color: #ff8a8a;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            box-shadow: inset 0 5px 0 rgba(255, 255, 255, 0.3), 0 6px 12px rgba(0, 0, 0, 0.1);
+            transition: all 0.5s;
+        }
+        
+        .break .tomato-face {
+            background-color: #6bc5d2;
+        }
+        
+        .tomato-eyes {
+            display: flex;
+            gap: clamp(15px, 5vw, 30px);
+            margin-bottom: 6px;
+        }
+        
+        .tomato-eye {
+            width: clamp(12px, 3.5vw, 20px);
+            height: clamp(15px, 4.5vw, 25px);
+            background-color: white;
+            border-radius: 50%;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .tomato-eye::after {
+            content: '';
+            position: absolute;
+            width: clamp(6px, 2vw, 10px);
+            height: clamp(6px, 2vw, 10px);
+            background-color: #333;
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        
+        .tomato-mouth {
+            width: clamp(25px, 8vw, 40px);
+            height: clamp(12px, 3vw, 20px);
+            border-bottom: clamp(4px, 1.2vw, 6px) solid #333;
+            border-radius: 0 0 20px 20px;
+        }
+        
+        .break .tomato-mouth {
+            border-bottom: clamp(4px, 1.2vw, 6px) solid white;
+        }
+        
+        /* 时间显示 */
+        .time-display {
+            font-size: clamp(1.8rem, 8vw, 3rem);
+            font-weight: bold;
+            color: var(--dark-color);
+            text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.05);
+            margin: 3px 0;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+            line-height: 1;
+        }
+        
+        .focus .time-display {
+            color: var(--focus-color);
+        }
+        
+        .break .time-display {
+            color: var(--break-color);
+        }
+        
+        /* 状态文本 */
+        .status-text {
+            font-size: clamp(0.9rem, 3vw, 1.2rem);
+            font-weight: bold;
+            text-align: center;
+            min-height: clamp(30px, 7vw, 40px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 8px;
+            line-height: 1.2;
+            word-break: keep-all;
+            white-space: normal;
+        }
+        
+        .focus .status-text {
+            color: var(--focus-color);
+        }
+        
+        .break .status-text {
+            color: var(--break-color);
+        }
+        
+        /* 控制按钮 */
+        .controls {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 40px;
+            font-size: clamp(0.8rem, 2.2vw, 1rem);
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 0 rgba(0, 0, 0, 0.1);
+            white-space: nowrap;
+        }
+        
+        .btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn-start {
+            background-color: var(--success-color);
+            color: white;
+        }
+        
+        .btn-pause {
+            background-color: var(--accent-color);
+            color: var(--dark-color);
+        }
+        
+        .btn-reset {
+            background-color: #f0f0f0;
+            color: #666;
+        }
+        
+        @media (min-width: 768px) and (orientation: landscape) {
+            .btn {
+                padding: 10px 20px;
+                font-size: 0.9rem;
+            }
+        }
+        
+        /* 设置区域 */
+        .settings {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+            padding: 10px;
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.05);
+            flex-shrink: 0;
+        }
+        
+        .section-title {
+            font-size: clamp(0.9rem, 2.5vw, 1.1rem);
+            margin-bottom: 8px;
+            color: var(--dark-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            width: 100%;
+            text-align: center;
+            white-space: nowrap;
+        }
+        
+        .settings-group {
+            display: flex;
+            gap: 15px;
+            width: 100%;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .time-setting {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            min-width: 90px;
+        }
+        
+        .time-setting label {
+            font-weight: bold;
+            color: #666;
+            font-size: clamp(0.7rem, 1.8vw, 0.9rem);
+            text-align: center;
+            white-space: nowrap;
+        }
+        
+        .time-input {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .time-input input {
+            width: 50px;
+            padding: 5px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: clamp(0.8rem, 2.2vw, 1rem);
+            text-align: center;
+        }
+        
+        .time-input input:focus {
+            border-color: var(--primary-color);
+            outline: none;
+        }
+        
+        @media (min-width: 768px) and (orientation: landscape) {
+            .settings {
+                padding: 12px 10px;
+            }
+            
+            .settings-group {
+                gap: 20px;
+            }
+            
+            .time-setting {
+                min-width: 100px;
+            }
+            
+            .time-input input {
+                width: 60px;
+            }
+        }
+        
+        /* 超小屏幕优化 */
+        @media (max-width: 360px) and (orientation: portrait) {
+            .container {
+                padding: 10px;
+            }
+            
+            h1 {
+                font-size: 1.2rem;
+            }
+            
+            .subtitle {
+                font-size: 0.7rem;
+            }
+            
+            .mode-tag {
+                padding: 4px 8px;
+                font-size: 0.7rem;
+            }
+            
+            .time-display {
+                font-size: 1.6rem;
+            }
+            
+            .status-text {
+                font-size: 0.8rem;
+            }
+            
+            .btn {
+                padding: 6px 12px;
+                font-size: 0.7rem;
+            }
+            
+            .time-setting {
+                min-width: 80px;
+            }
+            
+            .time-input input {
+                width: 40px;
+            }
+        }
+        
+        /* 防止内容挤压 */
+        .controls, .settings, .mode-indicator, header {
+            min-height: auto;
+        }
+        
+        /* 动画 */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .pulse {
+            animation: pulse 1.5s infinite;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        /* 图标样式 */
+        .icon {
+            display: inline-block;
+            width: 1em;
+            height: 1em;
+            stroke-width: 0;
+            stroke: currentColor;
+            fill: currentColor;
+        }
+        
+        .icon-sm {
+            width: 1.1em;
+            height: 1.1em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>小番茄成长计时器</h1>
+            <p class="subtitle">专注学习，快乐成长！</p>
+        </header>
+        
+        <div class="app-container">
+            <div class="main-content">
+                <!-- 模式指示器 -->
+                <div class="mode-indicator">
+                    <div class="mode-tag focus-tag active">
+                        <svg class="icon icon-sm" viewBox="0 0 24 24">
+                            <path d="M9,14A6,6 0 0,1 3,8A6,6 0 0,1 9,2C10.04,2 11.06,2.24 12,2.68C12.94,2.24 13.96,2 15,2A6,6 0 0,1 21,8A6,6 0 0,1 15,14C13.96,14 12.94,13.76 12,13.32C11.06,13.76 10.04,14 9,14M9,4C7.34,4 6,5.34 6,7C6,8.66 7.34,10 9,10C10.66,10 12,8.66 12,7C12,5.34 10.66,4 9,4M15,4C13.34,4 12,5.34 12,7C12,8.66 13.34,10 15,10C16.66,10 18,8.66 18,7C18,5.34 16.66,4 15,4M2,14V16H5.2C5.2,16 6,15.1 6,14C6,12.9 5.1,12 4,12H2V14M22,12H20V14H22V12M22,8H20V10H22V8M22,4H20V6H22V4M18,2V4H20V2H18M16,2H14V4H16V2M12,2H10V4H12V2M2,4H4V2H2V4M2,8H4V6H2V8M2,12H4V10H2V12Z"/>
+                        </svg>
+                        <span>专注时间</span>
+                    </div>
+                    <div class="mode-tag break-tag">
+                        <svg class="icon icon-sm" viewBox="0 0 24 24">
+                            <path d="M2,21H20V19H2M20,8H18V5H20M20,3H4V13A4,4 0 0,0 8,17H14A4,4 0 0,0 18,13V10H20A2,2 0 0,0 22,8V5C22,3.89 21.1,3 20,3Z"/>
+                        </svg>
+                        <span>休息时间</span>
+                    </div>
+                </div>
+                
+                <!-- 番茄钟主体 -->
+                <div class="tomato-timer focus">
+                    <div class="tomato-container">
+                        <!-- 番茄进度环 -->
+                        <div class="tomato-circle">
+                            <div class="progress-ring"></div>
+                            <div class="progress-fill"></div>
+                            
+                            <!-- 番茄脸 -->
+                            <div class="tomato-face">
+                                <div class="tomato-eyes">
+                                    <div class="tomato-eye"></div>
+                                    <div class="tomato-eye"></div>
+                                </div>
+                                <div class="tomato-mouth"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 时间显示 -->
+                    <div class="time-display">25:00</div>
+                    
+                    <!-- 状态文本 -->
+                    <div class="status-text">点击开始，进入专注时间！</div>
+                    
+                    <!-- 控制按钮 -->
+                    <div class="controls">
+                        <button class="btn btn-start" id="startBtn">
+                            <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                <path d="M8,5.14V19.14L19,12.14L8,5.14Z"/>
+                            </svg>
+                            开始专注
+                        </button>
+                        <button class="btn btn-pause hidden" id="pauseBtn">
+                            <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                <path d="M14,19H18V5H14M6,19H10V5H6V19Z"/>
+                            </svg>
+                            暂停
+                        </button>
+                        <button class="btn btn-reset" id="resetBtn">
+                            <svg class="icon icon-sm" viewBox="0 0 24 24">
+                                <path d="M12,5V1L7,6L12,11V7A6,6 0 0,1 18,13A6,6 0 0,1 12,19A6,6 0 0,1 6,13H4A8,8 0 0,0 12,21A8,8 0 0,0 20,13A8,8 0 0,0 12,5Z"/>
+                            </svg>
+                            重置
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="sidebar">
+                <!-- 设置区域 -->
+                <div class="settings">
+                    <h2 class="section-title">
+                        <svg class="icon icon-sm" viewBox="0 0 24 24">
+                            <path d="M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.96 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.96 4.46,5.05 4.34,5.27L2.34,8.73C2.22,8.95 2.27,9.22 2.46,9.37L4.57,11C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.22,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.94C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.68 16.04,18.34 16.56,17.94L19.05,18.95C19.27,19.03 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z"/>
+                        </svg>
+                        番茄钟设置
+                    </h2>
+                    <div class="settings-group">
+                        <div class="time-setting">
+                            <label for="focusTime">专注时间 (分钟)</label>
+                            <div class="time-input">
+                                <button id="focusMinus">-</button>
+                                <input type="number" id="focusTime" min="1" max="60" value="25">
+                                <button id="focusPlus">+</button>
+                            </div>
+                        </div>
+                        <div class="time-setting">
+                            <label for="breakTime">休息时间 (分钟)</label>
+                            <div class="time-input">
+                                <button id="breakMinus">-</button>
+                                <input type="number" id="breakTime" min="1" max="30" value="5">
+                                <button id="breakPlus">+</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 番茄钟状态
+        const tomatoTimer = {
+            // 状态常量
+            STATES: {
+                FOCUS: 'focus',
+                BREAK: 'break',
+                PAUSED: 'paused',
+                IDLE: 'idle'
+            },
+            
+            // 当前状态
+            currentState: 'idle',
+            
+            // 时间设置（分钟）
+            focusTime: 25,
+            breakTime: 5,
+            
+            // 当前剩余时间（秒）
+            timeLeft: 25 * 60,
+            
+            // 计时器引用
+            timer: null,
+            
+            // 初始化
+            init: function() {
+                // 从本地存储加载数据
+                this.loadFromStorage();
+                
+                // 设置初始显示
+                this.updateDisplay();
+                this.updateProgressRing();
+                
+                // 绑定事件
+                this.bindEvents();
+                
+                // 更新状态文本
+                this.updateStatusText('点击"开始专注"按钮开始计时！');
+                
+                // 添加触摸事件支持
+                this.addTouchSupport();
+            },
+            
+            // 绑定事件
+            bindEvents: function() {
+                // 开始按钮
+                document.getElementById('startBtn').addEventListener('click', () => {
+                    this.startTimer();
+                });
+                
+                // 暂停按钮
+                document.getElementById('pauseBtn').addEventListener('click', () => {
+                    this.pauseTimer();
+                });
+                
+                // 重置按钮
+                document.getElementById('resetBtn').addEventListener('click', () => {
+                    this.resetTimer();
+                });
+                
+                // 时间设置
+                document.getElementById('focusTime').addEventListener('change', (e) => {
+                    let value = parseInt(e.target.value);
+                    if (value < 1) value = 1;
+                    if (value > 60) value = 60;
+                    this.focusTime = value;
+                    if (this.currentState === this.STATES.IDLE) {
+                        this.timeLeft = this.focusTime * 60;
+                        this.updateDisplay();
+                        this.updateProgressRing();
+                    }
+                    this.saveToStorage();
+                });
+                
+                document.getElementById('breakTime').addEventListener('change', (e) => {
+                    let value = parseInt(e.target.value);
+                    if (value < 1) value = 1;
+                    if (value > 30) value = 30;
+                    this.breakTime = value;
+                    this.saveToStorage();
+                });
+                
+                // 时间加减按钮
+                document.getElementById('focusPlus').addEventListener('click', () => {
+                    let input = document.getElementById('focusTime');
+                    let value = parseInt(input.value) + 1;
+                    if (value > 60) value = 60;
+                    input.value = value;
+                    this.focusTime = value;
+                    if (this.currentState === this.STATES.IDLE) {
+                        this.timeLeft = this.focusTime * 60;
+                        this.updateDisplay();
+                        this.updateProgressRing();
+                    }
+                    this.saveToStorage();
+                });
+                
+                document.getElementById('focusMinus').addEventListener('click', () => {
+                    let input = document.getElementById('focusTime');
+                    let value = parseInt(input.value) - 1;
+                    if (value < 1) value = 1;
+                    input.value = value;
+                    this.focusTime = value;
+                    if (this.currentState === this.STATES.IDLE) {
+                        this.timeLeft = this.focusTime * 60;
+                        this.updateDisplay();
+                        this.updateProgressRing();
+                    }
+                    this.saveToStorage();
+                });
+                
+                document.getElementById('breakPlus').addEventListener('click', () => {
+                    let input = document.getElementById('breakTime');
+                    let value = parseInt(input.value) + 1;
+                    if (value > 30) value = 30;
+                    input.value = value;
+                    this.breakTime = value;
+                    this.saveToStorage();
+                });
+                
+                document.getElementById('breakMinus').addEventListener('click', () => {
+                    let input = document.getElementById('breakTime');
+                    let value = parseInt(input.value) - 1;
+                    if (value < 1) value = 1;
+                    input.value = value;
+                    this.breakTime = value;
+                    this.saveToStorage();
+                });
+            },
+            
+            // 添加触摸事件支持
+            addTouchSupport: function() {
+                // 防止移动端双击缩放
+                let lastTouchEnd = 0;
+                document.addEventListener('touchend', function(event) {
+                    const now = (new Date()).getTime();
+                    if (now - lastTouchEnd <= 300) {
+                        event.preventDefault();
+                    }
+                    lastTouchEnd = now;
+                }, false);
+                
+                // 防止按钮在移动端点击时出现蓝色高亮
+                const buttons = document.querySelectorAll('button, input');
+                buttons.forEach(button => {
+                    button.addEventListener('touchstart', function() {
+                        this.style.webkitTapHighlightColor = 'transparent';
+                    });
+                });
+            },
+            
+            // 开始计时器
+            startTimer: function() {
+                if (this.currentState === this.STATES.FOCUS || this.currentState === this.STATES.BREAK) {
+                    // 已经在运行，暂停它
+                    this.pauseTimer();
+                    return;
+                }
+                
+                if (this.currentState === this.STATES.IDLE) {
+                    // 从空闲状态开始
+                    this.currentState = this.STATES.FOCUS;
+                    this.timeLeft = this.focusTime * 60;
+                    this.updateModeIndicator();
+                    this.playAudio('start');
+                    this.updateStatusText('专注时间，加油！');
+                } else if (this.currentState === this.STATES.PAUSED) {
+                    // 从暂停状态恢复
+                    this.currentState = this.timeLeft <= this.breakTime * 60 ? this.STATES.BREAK : this.STATES.FOCUS;
+                    this.updateModeIndicator();
+                    this.updateStatusText(this.currentState === this.STATES.FOCUS ? '继续专注，加油！' : '休息时间，放松一下！');
+                }
+                
+                // 更新UI
+                document.getElementById('startBtn').classList.add('hidden');
+                document.getElementById('pauseBtn').classList.remove('hidden');
+                document.querySelector('.tomato-face').classList.add('pulse');
+                
+                // 启动计时器
+                this.timer = setInterval(() => {
+                    this.tick();
+                }, 1000);
+                
+                this.saveToStorage();
+            },
+            
+            // 暂停计时器
+            pauseTimer: function() {
+                if (this.currentState === this.STATES.PAUSED) {
+                    // 如果已经暂停，恢复计时
+                    this.startTimer();
+                    return;
+                }
+                
+                clearInterval(this.timer);
+                this.currentState = this.STATES.PAUSED;
+                
+                // 更新UI
+                document.getElementById('startBtn').classList.remove('hidden');
+                document.getElementById('pauseBtn').classList.add('hidden');
+                document.getElementById('startBtn').innerHTML = '<svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M8,5.14V19.14L19,12.14L8,5.14Z"/></svg>继续';
+                document.querySelector('.tomato-face').classList.remove('pulse');
+                
+                this.updateStatusText('已暂停');
+                this.playAudio('pause');
+                
+                this.saveToStorage();
+            },
+            
+            // 重置计时器
+            resetTimer: function() {
+                clearInterval(this.timer);
+                this.currentState = this.STATES.IDLE;
+                this.timeLeft = this.focusTime * 60;
+                
+                // 更新UI
+                document.getElementById('startBtn').classList.remove('hidden');
+                document.getElementById('pauseBtn').classList.add('hidden');
+                document.getElementById('startBtn').innerHTML = '<svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M8,5.14V19.14L19,12.14L8,5.14Z"/></svg>开始专注';
+                document.querySelector('.tomato-face').classList.remove('pulse');
+                document.querySelector('.tomato-timer').classList.remove('break');
+                document.querySelector('.tomato-timer').classList.add('focus');
+                
+                this.updateModeIndicator();
+                this.updateDisplay();
+                this.updateProgressRing();
+                this.updateStatusText('点击开始，进入专注时间！');
+                
+                this.saveToStorage();
+            },
+            
+            // 计时器滴答
+            tick: function() {
+                this.timeLeft--;
+                
+                // 更新显示
+                this.updateDisplay();
+                this.updateProgressRing();
+                
+                // 检查时间是否结束
+                if (this.timeLeft <= 0) {
+                    this.timeUp();
+                }
+                
+                this.saveToStorage();
+            },
+            
+            // 时间到
+            timeUp: function() {
+                clearInterval(this.timer);
+                
+                if (this.currentState === this.STATES.FOCUS) {
+                    // 专注时间结束，开始休息
+                    this.playAudio('finish');
+                    this.currentState = this.STATES.BREAK;
+                    this.timeLeft = this.breakTime * 60;
+                    this.updateModeIndicator();
+                    this.updateStatusText('专注完成！休息一下吧！');
+                    
+                    // 切换为休息模式
+                    document.querySelector('.tomato-timer').classList.remove('focus');
+                    document.querySelector('.tomato-timer').classList.add('break');
+                    
+                    // 自动开始休息计时
+                    setTimeout(() => {
+                        this.startTimer();
+                        this.playAudio('breakStart');
+                        this.updateStatusText('休息时间，放松一下！');
+                    }, 1500);
+                    
+                } else if (this.currentState === this.STATES.BREAK) {
+                    // 休息时间结束，回到空闲状态
+                    this.playAudio('finish');
+                    this.currentState = this.STATES.IDLE;
+                    this.timeLeft = this.focusTime * 60;
+                    this.updateModeIndicator();
+                    this.updateStatusText('休息结束！准备下一轮专注！');
+                    
+                    // 切换回专注模式
+                    document.querySelector('.tomato-timer').classList.remove('break');
+                    document.querySelector('.tomato-timer').classList.add('focus');
+                    
+                    // 更新按钮
+                    document.getElementById('startBtn').classList.remove('hidden');
+                    document.getElementById('pauseBtn').classList.add('hidden');
+                    document.getElementById('startBtn').innerHTML = '<svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M8,5.14V19.14L19,12.14L8,5.14Z"/></svg>开始专注';
+                    document.querySelector('.tomato-face').classList.remove('pulse');
+                    
+                    // 显示庆祝效果
+                    this.showCelebration();
+                }
+                
+                this.updateDisplay();
+                this.updateProgressRing();
+                this.saveToStorage();
+            },
+            
+            // 更新显示
+            updateDisplay: function() {
+                const minutes = Math.floor(this.timeLeft / 60);
+                const seconds = this.timeLeft % 60;
+                document.querySelector('.time-display').textContent = 
+                    `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            },
+            
+            // 更新进度环
+            updateProgressRing: function() {
+                const progressFill = document.querySelector('.progress-fill');
+                const totalTime = this.currentState === this.STATES.FOCUS || 
+                                 (this.currentState === this.STATES.IDLE && this.timeLeft === this.focusTime * 60) ? 
+                                 this.focusTime * 60 : this.breakTime * 60;
+                const elapsed = totalTime - this.timeLeft;
+                const progress = elapsed / totalTime;
+                
+                // 计算旋转角度（从-135度开始，到45度结束）
+                const rotation = -135 + (progress * 270);
+                progressFill.style.transform = `rotate(${rotation}deg)`;
+            },
+            
+            // 更新模式指示器
+            updateModeIndicator: function() {
+                const focusTag = document.querySelector('.focus-tag');
+                const breakTag = document.querySelector('.break-tag');
+                const timerContainer = document.querySelector('.tomato-timer');
+                
+                if (this.currentState === this.STATES.FOCUS || 
+                    (this.currentState === this.STATES.IDLE && this.timeLeft === this.focusTime * 60) ||
+                    this.currentState === this.STATES.PAUSED) {
+                    // 专注模式
+                    focusTag.classList.add('active');
+                    breakTag.classList.remove('active');
+                    timerContainer.classList.remove('break');
+                    timerContainer.classList.add('focus');
+                } else {
+                    // 休息模式
+                    focusTag.classList.remove('active');
+                    breakTag.classList.add('active');
+                    timerContainer.classList.remove('focus');
+                    timerContainer.classList.add('break');
+                }
+            },
+            
+            // 更新状态文本
+            updateStatusText: function(text) {
+                document.querySelector('.status-text').textContent = text;
+            },
+            
+            // 显示庆祝效果
+            showCelebration: function() {
+                const statusText = document.querySelector('.status-text');
+                
+                // 添加庆祝类
+                statusText.classList.add('pulse');
+                
+                // 3秒后移除效果
+                setTimeout(() => {
+                    statusText.classList.remove('pulse');
+                }, 3000);
+            },
+            
+            // 播放音频
+            playAudio: function(type) {
+                try {
+                    // 使用Web Audio API创建简单音频
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    
+                    if (type === 'start' || type === 'breakStart') {
+                        // 开始音效
+                        oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime);
+                        oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1);
+                        oscillator.frequency.setValueAtTime(783.99, audioContext.currentTime + 0.2);
+                    } else if (type === 'pause') {
+                        // 暂停音效
+                        oscillator.frequency.setValueAtTime(392, audioContext.currentTime);
+                        oscillator.frequency.setValueAtTime(349.23, audioContext.currentTime + 0.1);
+                    } else if (type === 'finish') {
+                        // 完成音效
+                        oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime);
+                        oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1);
+                        oscillator.frequency.setValueAtTime(783.99, audioContext.currentTime + 0.2);
+                        oscillator.frequency.setValueAtTime(1046.50, audioContext.currentTime + 0.3);
+                    }
+                    
+                    gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                    
+                    oscillator.start(audioContext.currentTime);
+                    oscillator.stop(audioContext.currentTime + 0.5);
+                } catch (e) {
+                    // 如果Web Audio API不可用，静默失败
+                }
+            },
+            
+            // 保存到本地存储
+            saveToStorage: function() {
+                const data = {
+                    focusTime: this.focusTime,
+                    breakTime: this.breakTime
+                };
+                localStorage.setItem('tomatoTimer', JSON.stringify(data));
+            },
+            
+            // 从本地存储加载
+            loadFromStorage: function() {
+                const data = JSON.parse(localStorage.getItem('tomatoTimer'));
+                if (data) {
+                    this.focusTime = data.focusTime || 25;
+                    this.breakTime = data.breakTime || 5;
+                    
+                    // 更新UI
+                    document.getElementById('focusTime').value = this.focusTime;
+                    document.getElementById('breakTime').value = this.breakTime;
+                }
+            }
+        };
+        
+        // 页面加载完成后初始化番茄钟
+        document.addEventListener('DOMContentLoaded', () => {
+            tomatoTimer.init();
+            
+            // 设置加减按钮的样式
+            const style = document.createElement('style');
+            style.textContent = `
+                .time-input button {
+                    width: 30px;
+                    height: 30px;
+                    border: none;
+                    border-radius: 50%;
+                    background-color: var(--primary-color);
+                    color: white;
+                    font-size: 1.2rem;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    transition: all 0.2s;
+                    touch-action: manipulation;
+                }
+                
+                .time-input button:hover {
+                    background-color: #ff5252;
+                }
+                
+                .time-input button:active {
+                    transform: scale(0.95);
+                }
+                
+                @media (max-width: 360px) {
+                    .time-input button {
+                        width: 25px;
+                        height: 25px;
+                        font-size: 1rem;
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+        });
+    </script>
+</body>
+</html>
